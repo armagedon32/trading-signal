@@ -32,8 +32,14 @@ TWELVE_INTERVAL_MAP = {"1m": "1min", "5m": "5min", "1h": "1h"}
 with st.sidebar:
     st.header("Settings")
     st.subheader("Data Provider")
+    secrets_key = ""
+    try:
+        secrets_key = st.secrets.get("TWELVE_DATA_API_KEY", "")
+    except Exception:
+        secrets_key = ""
     env_key = os.getenv("TWELVE_DATA_API_KEY", "")
-    twelvedata_key = st.text_input("Twelve Data API Key", value=env_key, type="password")
+    default_key = secrets_key or env_key
+    twelvedata_key = st.text_input("Twelve Data API Key", value=default_key, type="password")
 
     tickers_raw = st.text_area("Tickers (comma or newline)", value="AAPL, MSFT, NVDA")
     tickers = [t.strip().upper() for t in tickers_raw.replace("\n", ",").split(",") if t.strip()]
