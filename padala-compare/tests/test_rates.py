@@ -201,3 +201,20 @@ def test_fmt_amount_never_uses_scientific_notation():
     assert rates.fmt_amount(503.5) == "503.5"
     assert rates.fmt_amount(1_000_000.0) == "1000000"
     assert rates.fmt_amount(0.1 + 0.2) == "0.3"
+
+
+def test_remitly_promo_cap_blends_rates_for_large_amounts():
+    """Remitly's promo applies only to the first 1,000 USD; above that the regular rate applies."""
+    payload = load("remitly_usd_500.json")
+    est = payload["estimate"]
+    est["send_amount"] = "5000.00"
+    est["receive_amount"] = "312570.00"  # what Remitly showed for 5,000 USD on 2026-09-02
+    est["exchange_rate"] = {"base_rate": "62.10", "capped_promotional_exchange_rate_amount": "1000.00",
+                            "promotional_exchange_rate": "64.17"}
+    q = rates.parse_remitly_estimate(payload, 5000)
+    assert q.promo and q.promo_cap == 1000 and q.promo_rate == 64.17 and q.regular_rate == 62.10
+    expected = 1000 * 64.17 + 4000 * 62.10
+    assert q.received == pytest.approx(expected)
+    assert q.received == pytest.approx(312570.0, rel=1e-4)  # matches Remitly's own number
+    assert q.rate == pytest.approx(expected / 5000, rel=1e-6)  # blended headline rate
+    assert q.received_for(500) == pytest.approx(500 * 64.17)  # fully inside the cap

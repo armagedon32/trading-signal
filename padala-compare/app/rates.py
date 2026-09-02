@@ -78,10 +78,21 @@ class Quote:
     promo_note: str = ""
     regular_received: float | None = None  # what you'd get without a new-customer promo
     delivery: str = ""
+    promo_rate: float | None = None    # promo rate per unit (Remitly), applies up to promo_cap
+    regular_rate: float | None = None  # rate after the promo / beyond the cap
+    promo_cap: float | None = None     # promo applies to the first N units sent
 
     def effective_rate(self, amount: float) -> float:
         """Pesos per unit actually paid, fee included."""
         return self.received / amount if amount else 0.0
+
+    def received_for(self, amount: float) -> float:
+        """Pesos received when paying `amount` in total, honouring a capped promo rate."""
+        converted = max(amount - self.fee, 0.0)
+        if self.promo and self.promo_rate and self.regular_rate and self.promo_cap:
+            in_promo = min(converted, self.promo_cap)
+            return round(in_promo * self.promo_rate + (converted - in_promo) * self.regular_rate, 2)
+        return round(converted * self.rate, 2)
 
     def markup_pct(self, mid_rate: float | None) -> float | None:
         """How far below the mid-market rate the provider's rate is (hidden cost)."""
@@ -331,26 +342,31 @@ def parse_remitly_estimate(payload: Any, amount: float) -> Quote:
     # Remitly charges any fee on top of the amount sent; the Wise feed treats the
     # amount as the total you pay.  Normalise to "you pay `amount` in total".
     conversion_rate = received / send_amount
-    if fee > 0:
-        received = (amount - fee) * conversion_rate
 
     quote = Quote(
         provider_key="remitly",
         provider_name=PROVIDERS["remitly"].name,
         rate=round(conversion_rate, 6),
         fee=fee,
-        received=round(received, 2),
+        received=0.0,
         source=SOURCE_REMITLY,
         collected_at=utc_now().isoformat(timespec="seconds"),
     )
     if promo_rate and base_rate and float(promo_rate) > base_rate:
         quote.promo = True
+        quote.promo_rate = float(promo_rate)
+        quote.regular_rate = base_rate
+        quote.promo_cap = float(cap) if cap else None
         cur = (est.get("conduit") or {}).get("source_currency", {}).get("alpha3", "")
         cap_text = f" on your first {cur} {float(cap):,.0f}" if cap else ""
         quote.promo_note = (
             f"New-customer promo rate {float(promo_rate):.4g} (regular {base_rate:.4g}){cap_text}."
         )
-        quote.regular_received = round((amount - fee) * base_rate, 2)
+        quote.regular_received = round(max(amount - fee, 0.0) * base_rate, 2)
+    quote.received = quote.received_for(amount)
+    if quote.promo and quote.promo_cap and amount - fee > quote.promo_cap:
+        # blended: promo on the first `cap`, regular rate on the rest
+        quote.rate = round(quote.received / max(amount - fee, 1e-9), 6)
     return quote
 
 

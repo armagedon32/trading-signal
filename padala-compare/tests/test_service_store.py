@@ -158,3 +158,26 @@ def test_cache_amount_buckets():
 def test_service_lazy_client_is_real_httpx(store):
     svc = RateService(store)
     assert isinstance(svc.client, httpx.Client)
+
+
+def test_compare_falls_back_to_other_amount_when_offline(service, routes, fast_settings):
+    """Nothing cached for 1000 USD, every source down -> reuse the 500 USD copy, rescaled and flagged."""
+    service.compare("USD", 500)
+    routes.set(rates.WISE_COMPARISON_URL, httpx.ConnectError("down"))
+    routes.set(rates.REMITLY_ESTIMATE_URL, 500)
+    out = service.compare("USD", 1000)
+    assert out.stale is True and out.amount == 1000
+    assert out.best.provider_key == "remitly" and out.best.received == pytest.approx(1000 * 64.16)
+    wise = next(q for q in out.quotes if q.provider_key == "wise")
+    assert wise.received == pytest.approx((1000 - 9.43) * 62.5104, rel=1e-6)
+
+
+def test_store_cache_find_returns_newest(tmp_path):
+    s = JsonStore(tmp_path / "x.json")
+    assert s.cache_find("cmp:USD:") is None
+    s.cache_put("cmp:USD:500", {"a": 1})
+    s._data["cache"]["cmp:USD:500"]["saved_at"] -= 50
+    s.cache_put("cmp:USD:1000", {"a": 2})
+    s.cache_put("cmp:AED:2000", {"a": 3})
+    key, value, age = s.cache_find("cmp:USD:")
+    assert key == "cmp:USD:1000" and value == {"a": 2} and age < 5

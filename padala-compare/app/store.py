@@ -94,6 +94,20 @@ class JsonStore:
     def cache_put(self, key: str, value: Any) -> None:
         self.put("cache", key, {"saved_at": datetime.now(timezone.utc).timestamp(), "value": value})
 
+    def cache_find(self, prefix: str) -> tuple[str, Any, float] | None:
+        """Newest cache entry whose key starts with `prefix` -> (key, value, age_seconds)."""
+        with self._lock:
+            newest: tuple[str, Any, float] | None = None
+            for key, entry in self._load().get("cache", {}).items():
+                if not key.startswith(prefix) or not isinstance(entry, dict):
+                    continue
+                saved = float(entry.get("saved_at", 0))
+                if newest is None or saved > newest[2]:
+                    newest = (key, entry.get("value"), saved)
+            if newest is None:
+                return None
+            return newest[0], newest[1], datetime.now(timezone.utc).timestamp() - newest[2]
+
     def log_rate(self, currency: str, day: str, rate: float) -> None:
         with self._lock:
             data = self._load()

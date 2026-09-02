@@ -69,8 +69,14 @@ class RateService:
         if live:
             self.store.cache_put(cache_key, comparison.to_dict())
             return self._rescale(comparison, amount)
-        if cached:  # every live source failed - serve the old one, flagged
-            old = rates.Comparison.from_dict(cached)
+        # Every live source failed. Serve the last good copy for this amount, or the
+        # newest one we have for this currency (quotes scale with the amount), flagged.
+        fallback = cached
+        if fallback is None:
+            found = self.store.cache_find(f"cmp:{currency}:")
+            fallback = found[1] if found else None
+        if fallback:
+            old = rates.Comparison.from_dict(fallback)
             old.stale = True
             old.warnings = comparison.warnings + ["Showing the last saved rates."]
             return self._rescale(old, amount)
@@ -82,9 +88,16 @@ class RateService:
         if abs(comparison.amount - amount) < 1e-9 or comparison.amount <= 0:
             return comparison
         for q in comparison.quotes:
-            q.received = round((amount - q.fee) * q.rate, 2)
-            if q.regular_received is not None:
-                q.regular_received = round((amount - q.fee) * (q.regular_received / max(comparison.amount - q.fee, 1e-9)), 2)
+            if q.promo and q.promo_rate and q.regular_rate:
+                # promo quotes carry their own per-unit rates; the headline `rate`
+                # may be a blend when the amount exceeds the promo cap
+                q.received = q.received_for(amount)
+                q.rate = round(q.received / max(amount - q.fee, 1e-9), 6)
+                q.regular_received = round(max(amount - q.fee, 0.0) * q.regular_rate, 2)
+            else:
+                q.received = round(max(amount - q.fee, 0.0) * q.rate, 2)
+                if q.regular_received is not None:
+                    q.regular_received = round(max(amount - q.fee, 0.0) * (q.regular_received / max(comparison.amount - q.fee, 1e-9)), 2)
         comparison.quotes.sort(key=lambda q: q.received, reverse=True)
         comparison.amount = amount
         return comparison

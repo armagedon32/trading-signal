@@ -30,7 +30,7 @@ name (~₱600/year) is optional but recommended.
 | `app/bot.py` | Telegram commands `/rate`, `/compare`, `/alert`, `/daily`; the alert and morning-digest jobs; a long-polling mode for running on your own PC. |
 | `app/chart.py` | 30-day rate chart drawn as SVG on the server (no JavaScript). |
 | `data/manual_rates.json` | Optional hand-typed rates for providers without a public calculator. |
-| `tests/` | 51 tests using real provider payloads recorded on 2026-09-02; no network needed. |
+| `tests/` | 54 tests using real provider payloads recorded on 2026-09-02; no network needed. |
 
 Supported sending currencies: USD, AED, SAR, CAD, GBP, AUD, SGD, JPY, EUR, HKD.
 
@@ -44,6 +44,15 @@ So AED shows Remitly + manual rates, and SAR relies on the rates you type into
 
 ## Run it on your computer (5 minutes)
 
+**Easiest way – no typing:**
+
+1. Install Python 3.11+ from https://www.python.org/downloads/ (Windows: tick **"Add python.exe to PATH"** in the installer).
+2. Get the code: https://github.com/armagedon32/trading-signal → green **Code** button → **Download ZIP** → unzip.
+3. Open the `padala-compare` folder inside it and double-click **`run.bat`** (Windows) or run **`./run.sh`** (macOS/Linux).
+   The first start installs a few packages (about a minute); after that it opens http://localhost:8000 in your browser.
+
+**Command-line way:**
+
 ```bash
 git clone https://github.com/armagedon32/trading-signal.git
 cd trading-signal/padala-compare
@@ -56,7 +65,19 @@ uvicorn app.main:app --reload
 
 Open http://localhost:8000 – rates load live from the providers.
 
-Run the tests: `pip install -r requirements-dev.txt && python -m pytest`
+Run the tests: `./run.sh test` (or `pip install -r requirements-dev.txt && python -m pytest`).
+
+### 10-minute test checklist
+
+| # | Do this | You should see |
+|---|---|---|
+| 1 | Open http://localhost:8000 | A table for 500 USD, Remitly / Wise / Instarem … ranked by pesos, and a 30-day chart. Check the numbers against https://www.remitly.com and https://wise.com/ph/currency-converter – they should match to within a few pesos (rates move all day). |
+| 2 | Change the amount to 1000 and press Compare | Numbers roughly double; the order may change. |
+| 3 | Pick AED, GBP, JPY in the dropdown | Each corridor loads its own providers. AED and SAR show fewer (see the note above). |
+| 4 | Click **Open** next to any provider | A new tab opens on that provider's website. (Once you add your referral link to `.env`, this is where it goes.) |
+| 5 | Open http://localhost:8000/api/compare?cur=USD&amount=500 | The same data as JSON – handy to confirm the site is fetching live. |
+| 6 | Turn off your Wi-Fi and reload the page | The last rates still show, marked "may be outdated". Nothing crashes. |
+| 7 | *(optional)* Create a bot with @BotFather, put the token in `.env`, double-click `bot.bat` (or `./run.sh bot`), then message the bot `/rate USD` and `/compare USD 500` | Replies within a second; `/alert USD 1` makes it message you at the next 15-minute job run. |
 
 ---
 
