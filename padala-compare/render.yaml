@@ -1,0 +1,28 @@
+# One-click deploy on Render's free tier (https://render.com). Free instances sleep
+# after 15 min without traffic; the GitHub Action cron keeps the rate cache warm.
+services:
+  - type: web
+    name: padala-compare
+    runtime: python
+    plan: free
+    rootDir: padala-compare
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: SITE_URL
+        sync: false
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: AFF_REMITLY
+        sync: false
+      - key: AFF_WISE
+        sync: false
+      - key: AFF_WORLDREMIT
+        sync: false

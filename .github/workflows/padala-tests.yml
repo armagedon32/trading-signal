@@ -1,0 +1,20 @@
+name: padala-compare tests
+on:
+  push:
+    paths: ["padala-compare/**", ".github/workflows/padala-tests.yml"]
+  pull_request:
+    paths: ["padala-compare/**", ".github/workflows/padala-tests.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: padala-compare
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pyflakes app tests
+      - run: python -m pytest

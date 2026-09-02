@@ -1,0 +1,33 @@
+# Free scheduler for PadalaCompare. GitHub runs these on a timer and pokes your site so
+# Telegram alerts / the daily digest go out and the rate cache (and our own rate history) stays warm.
+# It does nothing until you add the repository secrets PADALA_SITE_URL and PADALA_ADMIN_TOKEN
+# (Settings -> Secrets and variables -> Actions).
+name: padala-compare bot jobs
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # alerts + daily digest
+    - cron: "7 * * * *"      # hourly cache refresh
+  workflow_dispatch:
+jobs:
+  alerts:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/15 * * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: send alerts + digest
+        env:
+          SITE_URL: ${{ secrets.PADALA_SITE_URL }}
+          ADMIN_TOKEN: ${{ secrets.PADALA_ADMIN_TOKEN }}
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$ADMIN_TOKEN" ]; then echo "secrets not set yet - skipping"; exit 0; fi
+          curl -fsS -X POST -m 60 -H "X-Admin-Token: $ADMIN_TOKEN" "$SITE_URL/admin/jobs"
+  refresh:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '7 * * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: refresh rate cache
+        env:
+          SITE_URL: ${{ secrets.PADALA_SITE_URL }}
+          ADMIN_TOKEN: ${{ secrets.PADALA_ADMIN_TOKEN }}
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$ADMIN_TOKEN" ]; then echo "secrets not set yet - skipping"; exit 0; fi
+          curl -fsS -X POST -m 120 -H "X-Admin-Token: $ADMIN_TOKEN" "$SITE_URL/admin/refresh"

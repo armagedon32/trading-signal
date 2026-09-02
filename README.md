@@ -78,3 +78,12 @@ python -m pyflakes app.py trading_signal tests
 - Indicators use conventional definitions (Wilder RSI/ADX) so they match common charting platforms; RSI is 100 (not NaN) in a pure up-move.
 - Backtest is long-only, next-bar execution, no fees or slippage.
 - Prediction outcomes are measured at expiry (bar containing the expiry instant). If no bar covers the expiry (market closed / feed gap) the record settles on the last available bar after a grace period and is annotated accordingly.
+
+---
+
+## Also in this repository: PadalaCompare (`padala-compare/`)
+
+A separate, self-contained project: a remittance-rate comparison website + Telegram bot for
+Filipinos abroad ("which app gives the most pesos today?"), monetised with referral links.
+It shares no code with the trading dashboard. See [`padala-compare/README.md`](padala-compare/README.md)
+for setup, free hosting and the Telegram bot.
