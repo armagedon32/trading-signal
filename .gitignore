@@ -1,3 +1,18 @@
+# secrets
 .env
+.streamlit/secrets.toml
+
+# local state
+.data/
+
+# python
 .venv/
+venv/
 __pycache__/
+*.pyc
+.pytest_cache/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store

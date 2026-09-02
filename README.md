@@ -1,35 +1,80 @@
-﻿# Trading Signal Dashboard
+# Trading Signal Dashboard
 
-Python + Streamlit dashboard that pulls live-ish market data (via yfinance) and computes an SMA crossover signal.
+Python + Streamlit dashboard that pulls market data (Yahoo Finance / Twelve Data), computes an SMA-crossover signal with supporting indicators, and tracks how its Up/Down predictions actually resolve.
+
+> This is a demo. Signals are experimental, data is delayed, and nothing here is financial advice.
 
 ## Quick start
-1. Create and activate a virtual environment
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run: `streamlit run app.py`
+
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Optional: copy `.env.example` to `.env` and fill in your keys so you don't have to paste them in the sidebar every time.
+
+## Project layout
+
+```
+app.py                     Streamlit UI only (widgets, charts, session state)
+trading_signal/
+  config.py                option tables, expiry/interval maps, lookback limits
+  data.py                  yfinance + Twelve Data loaders, Telegram sender (no exceptions leak; errors are returned)
+  indicators.py            SMA/EMA, Wilder RSI, MACD, Bollinger %B, Wilder ADX, backtest + summary
+  models.py                Trend / ML Lite / ML Advanced / linear forecast, with walk-forward accuracy
+  tracker.py               prediction records, expiry-based resolution, stats, JSON persistence
+  market.py                FX / US-equity / crypto market-hours helper
+tests/                     pytest suite (pure functions + headless Streamlit UI tests)
+```
+
+The `trading_signal` package has no Streamlit dependency, so it can be imported from notebooks or scripts.
 
 ## Features
-- SMA crossover signal with chart
-- Multi-ticker watchlist summary
-- Multi-timeframe signals (5m/15m/1h/1d)
-- Telegram alerts every bar while BUY/SELL (select timeframe)
-- Experimental forecast of next-bar direction
-- Professional signal (Twelve Data + ML lite, Up/Down with confidence)
-- Accuracy tracker for predictions (resolved after expiry)
-- Backtest summary (total return, max drawdown, win rate)
 
-## Telegram setup
-1. Create a bot with BotFather and copy the token
-2. Get your chat id (e.g., from a `getUpdates` call)
-3. Paste token + chat id in the sidebar and enable alerts
+**Dashboard (Yahoo Finance)**
+- Watchlist and multi-timeframe (5m / 15m / 1h / 1d) SMA crossover signals with RSI and ADX
+- Price chart with SMA lines and crossover markers
+- Experimental least-squares next-bar forecast with a walk-forward hit-rate
+- Backtest summary: strategy vs buy & hold, max drawdown, exposure, per-trade and in-market win rate
+- Telegram alert once per new bar on the alert timeframe (delivery is verified, failures are shown)
+- Auto-refresh every 60 s (fragment based; session state is preserved)
 
-## Twelve Data setup
-1. Create a Twelve Data API key
-2. Option A (temporary): paste the key in the sidebar
-3. Option B (persistent): create a `.env` file in this folder with:
-   `TWELVE_DATA_API_KEY=your_key_here`
-4. Use the Professional Signal page to select asset + expiry and get a prediction
+**Professional Signal (Twelve Data)**
+- Pick an asset and expiry (1m / 5m / 1h), get an **UP (Call)** / **DOWN (Put)** prediction from
+  - *Trend*: EMA(12/26) spread direction, conviction from Wilder ADX
+  - *ML Lite*: standardised logistic regression
+  - *ML Advanced*: XGBoost (falls back to RandomForest if xgboost is unavailable)
+- Every learned model shows its **walk-forward (out-of-sample) accuracy** next to the in-sample confidence
+- Log manual CALL / PUT trades to track your own hit-rate alongside the model
+- Live countdown from the moment you click, live price vs entry, and automatic resolution against the bar that contains the expiry time (never the entry bar)
+- Win / loss / tie stats, win-rate by confidence bucket, full history table
+- History is persisted to `.data/predictions.json` (configurable via `TRADING_SIGNAL_HISTORY`) so a browser reload doesn't wipe it
 
-## Notes
-- yfinance provides delayed market data for many exchanges.
-- Forecasts are experimental and can be wrong.
-- This is a demo signal; not financial advice.
+## Configuration
+
+| Setting | Where | Notes |
+| --- | --- | --- |
+| `TWELVE_DATA_API_KEY` | `.env`, `st.secrets`, or sidebar | Free tier: 8 credits/min, 800/day. Each prediction/refresh uses one credit per symbol+interval per minute (responses are cached for 60 s). |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | `.env` or sidebar | Create a bot with BotFather; get the chat id from a `getUpdates` call. |
+| `TRADING_SIGNAL_HISTORY` | env | Path of the prediction history JSON. |
+
+### Data limits worth knowing
+- Yahoo serves intraday history only for a trailing window (about 7 days for 1m, 60 days for 5m/15m, 730 days for 1h). The lookback is clamped automatically per interval.
+- Yahoo intraday data is delayed for many exchanges; the dashboard shows the age of the last bar.
+- Twelve Data timestamps are requested in UTC. Market status for FX follows the Sunday 17:00 – Friday 17:00 New York session.
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+pytest                      # ~65 tests, runs offline (all network calls are mocked)
+python -m pyflakes app.py trading_signal tests
+```
+
+## Notes on methodology
+- The bar being predicted is never part of the training set.
+- Indicators use conventional definitions (Wilder RSI/ADX) so they match common charting platforms; RSI is 100 (not NaN) in a pure up-move.
+- Backtest is long-only, next-bar execution, no fees or slippage.
+- Prediction outcomes are measured at expiry (bar containing the expiry instant). If no bar covers the expiry (market closed / feed gap) the record settles on the last available bar after a grace period and is annotated accordingly.
