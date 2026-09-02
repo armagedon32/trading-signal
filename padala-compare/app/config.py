@@ -6,6 +6,7 @@ Everything that a non-programmer might want to change lives here or in `.env`.
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -17,7 +18,35 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.getenv("PADALA_DATA_DIR", BASE_DIR / ".data"))
 
 SITE_NAME = os.getenv("SITE_NAME", "PadalaCompare")
-SITE_URL = os.getenv("SITE_URL", "http://localhost:8000").rstrip("/")
+
+
+def resolve_site_url(env: Mapping[str, str] | None = None) -> str:
+    """Public address of this deployment, without a trailing slash.
+
+    Order: explicit ``SITE_URL`` -> Render (``RENDER_EXTERNAL_URL``) ->
+    Railway (``RAILWAY_PUBLIC_DOMAIN``) -> Koyeb (``KOYEB_PUBLIC_DOMAIN``) ->
+    Fly.io (``FLY_APP_NAME``) -> ``http://localhost:8000``.  So on the common
+    free hosts nothing needs to be configured for links to be right.
+    """
+    env = os.environ if env is None else env
+    explicit = (env.get("SITE_URL") or "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+    render = (env.get("RENDER_EXTERNAL_URL") or "").strip()
+    if render:
+        return render.rstrip("/")
+    for key in ("RAILWAY_PUBLIC_DOMAIN", "KOYEB_PUBLIC_DOMAIN"):
+        domain = (env.get(key) or "").strip()
+        if domain:
+            domain = domain.removeprefix("https://").removeprefix("http://").rstrip("/")
+            return f"https://{domain}"
+    fly = (env.get("FLY_APP_NAME") or "").strip()
+    if fly:
+        return f"https://{fly}.fly.dev"
+    return "http://localhost:8000"
+
+
+SITE_URL = resolve_site_url()
 SITE_TAGLINE = "Magkano ang matatanggap? Compare remittance rates to the Philippines."
 
 # Seconds to keep live quotes before calling the providers again.

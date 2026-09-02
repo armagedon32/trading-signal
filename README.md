@@ -86,4 +86,5 @@ python -m pyflakes app.py trading_signal tests
 A separate, self-contained project: a remittance-rate comparison website + Telegram bot for
 Filipinos abroad ("which app gives the most pesos today?"), monetised with referral links.
 It shares no code with the trading dashboard. See [`padala-compare/README.md`](padala-compare/README.md)
-for setup, free hosting and the Telegram bot.
+for setup and the Telegram bot, and [`padala-compare/DEPLOY.md`](padala-compare/DEPLOY.md) for free hosting
+(the `render.yaml` at this repo's root deploys it on Render's free plan).

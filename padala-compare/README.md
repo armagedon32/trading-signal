@@ -30,7 +30,7 @@ name (~₱600/year) is optional but recommended.
 | `app/bot.py` | Telegram commands `/rate`, `/compare`, `/alert`, `/daily`; the alert and morning-digest jobs; a long-polling mode for running on your own PC. |
 | `app/chart.py` | 30-day rate chart drawn as SVG on the server (no JavaScript). |
 | `data/manual_rates.json` | Optional hand-typed rates for providers without a public calculator. |
-| `tests/` | 54 tests using real provider payloads recorded on 2026-09-02; no network needed. |
+| `tests/` | 57 tests using real provider payloads recorded on 2026-09-02; no network needed. |
 
 Supported sending currencies: USD, AED, SAR, CAD, GBP, AUD, SGD, JPY, EUR, HKD.
 
@@ -81,23 +81,23 @@ Run the tests: `./run.sh test` (or `pip install -r requirements-dev.txt && pytho
 
 ---
 
-## Put it online for free (Render)
+## Put it online for free
 
-1. Go to https://render.com → **New → Blueprint** → pick the `trading-signal` repo.
-   `render.yaml` (in this folder) sets everything up on the free plan – choose it as the blueprint file
-   (`padala-compare/render.yaml`). It already points Render at this sub-folder.
-2. In the Render dashboard set the environment variables `SITE_URL` (your Render URL, e.g.
-   `https://padala-compare.onrender.com`) and, later, your affiliate links and Telegram token.
-3. Visit the URL. Done.
+Full step-by-step for **Render** (₱0, recommended), **Railway** (free 30-day trial, then ~$5/month) and
+**Koyeb** (₱0) is in [`DEPLOY.md`](DEPLOY.md).
 
-Other free options that work the same way: Fly.io (`Dockerfile`), Railway/Koyeb (`Procfile`) – set the
-project root to `padala-compare`.
-Free Render instances sleep after 15 minutes without visitors; the GitHub Action below wakes it every 15
-minutes, which also keeps the rates fresh.
+Short version for Render: sign up with GitHub at https://render.com → **New → Blueprint** → connect
+`armagedon32/trading-signal` → **Deploy Blueprint**. The `render.yaml` at the repo root does the rest
+(free plan, Python 3.12, health check, random `ADMIN_TOKEN`). Your site is `https://padala-compare.onrender.com`
+(or similar) about three minutes later.
 
-> Note on data: the free tier has no permanent disk, so subscriber data lives in `.data/padala.json`
-> and is lost on redeploy. Either add a free persistent disk / volume and set `PADALA_DATA_DIR`,
-> or accept re-subscriptions early on. (Fly.io volumes and Koyeb are free options with disks.)
+The public URL is detected automatically on Render, Railway, Koyeb and Fly.io – you only need `SITE_URL`
+if you use a custom domain.
+
+> Free plans sleep when idle and have no permanent disk, so `.data/padala.json` (rate cache, Telegram
+> subscribers, click counts) is lost on restart. Rates just reload; subscribers would need to `/start` again.
+> Attach a volume (Railway / Koyeb / Fly.io) and set `PADALA_DATA_DIR` to keep it – the Dockerfile already
+> points at `/data`.
 
 ---
 
@@ -110,7 +110,8 @@ minutes, which also keeps the rates fresh.
    `curl -X POST -H "X-Admin-Token: <your ADMIN_TOKEN>" https://<your-site>/admin/webhook`
 5. Alerts and the 8 AM Manila digest are sent when something calls `POST /admin/jobs`.
    The included GitHub Action (`.github/workflows/padala-jobs.yml` at the repo root) does this every
-   15 minutes for free – add repository secrets `PADALA_SITE_URL` and `PADALA_ADMIN_TOKEN`.
+   15 minutes for free – add repository secrets `PADALA_SITE_URL` and `PADALA_ADMIN_TOKEN`
+   (also keeps a sleeping Render free instance awake).
    Any free cron service (cron-job.org) works too.
 
 No public URL yet? Run the bot from your own PC instead: `python -m app.bot` (long polling, jobs run every 15 min while it is open).
