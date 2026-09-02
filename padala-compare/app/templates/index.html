@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+{% set best = comparison.best %}
+<section class="hero">
+  <h1>Magkano ang matatanggap?</h1>
+  <p class="lead">See which app gives the <strong>most pesos</strong> for your padala today.</p>
+
+  <form method="get" action="/" class="picker">
+    <label>From
+      <select name="cur" onchange="this.form.submit()">
+        {% for code, c in currencies.items() %}
+        <option value="{{ code }}" {% if code == currency.code %}selected{% endif %}>{{ c.flag }} {{ code }} – {{ c.country }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Amount
+      <input type="number" name="amount" value="{{ amount|int if amount == amount|round else amount }}" min="1" max="1000000" step="any" inputmode="decimal">
+    </label>
+    <button type="submit">Compare</button>
+    <div class="presets">
+      {% for p in currency.amount_presets %}
+      <a href="/?cur={{ currency.code }}&amount={{ p }}" class="{% if p == amount %}on{% endif %}">{{ currency.symbol }}{{ "{:,}".format(p) }}</a>
+      {% endfor %}
+    </div>
+  </form>
+</section>
+
+{% if best %}
+<section class="best card">
+  <div class="best-label">Best today for {{ currency.symbol }}{{ amount|money(0) }} {{ currency.code }}</div>
+  <div class="best-row">
+    <div>
+      <div class="best-name">{{ best.provider_name }}</div>
+      <div class="best-amt">₱{{ best.received|money }}</div>
+      <div class="muted">rate {{ best.rate|rate4 }} · {% if best.fee %}fee {{ currency.symbol }}{{ best.fee|money }}{% else %}no fee{% endif %}
+        {% if best.delivery %}· {{ best.delivery }}{% endif %}</div>
+      {% if best.promo %}<div class="promo">🎁 {{ best.promo_note }}{% if best.regular_received %} After that: ₱{{ best.regular_received|money }}.{% endif %}</div>{% endif %}
+    </div>
+    <a class="cta" href="/go/{{ best.provider_key }}?cur={{ currency.code }}" rel="nofollow sponsored noopener" target="_blank">Send with {{ best.provider_name }} →</a>
+  </div>
+  {% if comparison.spread > 0 %}
+  <p class="spread">That is <strong>₱{{ comparison.spread|money }}</strong> more than the lowest option below.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>All options, most pesos first</h2>
+  {% if comparison.quotes %}
+  <table class="ranking">
+    <thead><tr><th>#</th><th>App</th><th class="num">You receive</th><th class="num">Rate</th><th class="num">Fee</th><th class="num">vs mid-market</th><th></th></tr></thead>
+    <tbody>
+    {% for q in comparison.quotes %}
+      {% set markup = q.markup_pct(comparison.mid_rate) %}
+      <tr class="{% if loop.first %}top{% endif %}">
+        <td>{{ loop.index }}</td>
+        <td>
+          <strong>{{ q.provider_name }}</strong>
+          {% if q.promo %}<span class="tag">new-customer promo</span>{% endif %}
+          {% if q.source == 'manual' %}<span class="tag grey">manual</span>{% endif %}
+          {% if q.delivery %}<div class="muted small">{{ q.delivery }}</div>{% endif %}
+        </td>
+        <td class="num"><strong>₱{{ q.received|money }}</strong>
+          {% if not loop.first %}<div class="muted small">−₱{{ (comparison.quotes[0].received - q.received)|money }}</div>{% endif %}
+        </td>
+        <td class="num">{{ q.rate|rate4 }}</td>
+        <td class="num">{% if q.fee %}{{ currency.symbol }}{{ q.fee|money }}{% else %}free{% endif %}</td>
+        <td class="num">{% if markup is not none %}{% if markup <= 0 %}<span class="good">at / above</span>{% else %}−{{ "%.2f"|format(markup) }}%{% endif %}{% else %}—{% endif %}</td>
+        <td><a class="btn" href="/go/{{ q.provider_key }}?cur={{ currency.code }}" rel="nofollow sponsored noopener" target="_blank">Open</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">Amounts shown are what your family receives after fees, for paying {{ currency.symbol }}{{ amount|money(0) }} in total by bank transfer / debit card.
+    {% if comparison.mid_rate %}Mid-market rate now: 1 {{ currency.code }} = ₱{{ comparison.mid_rate|rate4 }} ({{ comparison.mid_source }}).{% endif %}
+    Updated {{ comparison.fetched_at[:16].replace('T', ' ') }} UTC{% if comparison.stale %} – <strong>may be outdated</strong>{% endif %}.</p>
+  {% else %}
+  <p class="warn">We could not load rates right now. Please try again in a few minutes.</p>
+  {% endif %}
+  {% for w in comparison.warnings %}<p class="muted small">⚠ {{ w }}</p>{% endfor %}
+</section>
+
+<section class="card">
+  <h2>Is the {{ currency.code }} high today?</h2>
+  {% if market.rate %}
+  <div class="market-row">
+    <div class="big">1 {{ currency.code }} = ₱{{ market.rate|rate4 }}</div>
+    {% if market.label == 'high' %}<span class="badge hot">🔥 HIGH – better than {{ (market.percentile*100)|round|int }}% of the last 30 days</span>
+    {% elif market.label == 'low' %}<span class="badge cold">🧊 LOW – only better than {{ (market.percentile*100)|round|int }}% of the last 30 days</span>
+    {% elif market.percentile is not none %}<span class="badge">Normal – better than {{ (market.percentile*100)|round|int }}% of the last 30 days</span>{% endif %}
+  </div>
+  {% if market.high %}<p class="muted">30-day low ₱{{ market.low|rate4 }} · average ₱{{ market.average|rate4 }} · high ₱{{ market.high|rate4 }}
+    {% if market.change_1d is not none %}· since yesterday {{ '%+.3f'|format(market.change_1d) }}{% endif %}</p>{% endif %}
+  {{ chart|safe }}
+  {% else %}
+  <p class="warn">Rate history is not available right now.</p>
+  {% endif %}
+  {% for w in market.warnings %}<p class="muted small">⚠ {{ w }}</p>{% endfor %}
+</section>
+
+<section class="card alert-box">
+  <h2>Get a message when the {{ currency.code }} is high</h2>
+  <p>Free Telegram alert. Example: <code>/alert {{ currency.code }} {{ (market.high or market.rate or 0)|rate4 }}</code> – you get one message when the rate reaches your target, plus which app is best that moment.</p>
+  {% if bot_username %}
+  <a class="cta" href="https://t.me/{{ bot_username }}?start=alert" rel="noopener">Open the Telegram bot →</a>
+  {% else %}
+  <p class="muted small">(Bot link appears here once TELEGRAM_BOT_USERNAME is set.)</p>
+  {% endif %}
+  <p class="muted small">Share today's rate:
+    <a href="https://www.facebook.com/sharer/sharer.php?u={{ canonical|urlencode }}" rel="noopener" target="_blank">Facebook</a> ·
+    <a href="https://wa.me/?text={{ share_text }}" rel="noopener" target="_blank">WhatsApp</a> ·
+    <a href="https://t.me/share/url?url={{ canonical|urlencode }}&text={{ share_text }}" rel="noopener" target="_blank">Telegram</a></p>
+</section>
+
+<section class="faq">
+  <h2>How this works</h2>
+  <details open><summary>Why is one app's rate lower even with "zero fee"?</summary>
+    <p>Apps earn from the exchange rate. A "no fee" transfer with a rate 2% below mid-market costs you 2% – on {{ currency.symbol }}{{ amount|money(0) }} that is real money. We only compare the final pesos your family receives.</p></details>
+  <details><summary>What is the "new-customer promo"?</summary>
+    <p>Remitly and some others give a better rate on your first transfer (usually capped). Great for a first send; the regular rate applies afterwards, so check back before your next padala.</p></details>
+  <details><summary>Where do the numbers come from?</summary>
+    <p>Straight from the providers' own public calculators, refreshed every few minutes, and the mid-market rate from Wise / the European Central Bank. Rates change during the day – the amount inside the app at the moment you pay is final.</p></details>
+</section>
+{% endblock %}

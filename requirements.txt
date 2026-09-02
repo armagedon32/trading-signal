@@ -1,9 +1,12 @@
-﻿streamlit>=1.32,<2
-yfinance>=0.2.36,<1
-pandas>=2.1,<3
-numpy>=1.26,<2
-plotly>=5.20,<6
+streamlit>=1.51,<2
+yfinance>=0.2.50,<2
+pandas>=2.1,<4
+numpy>=1.26,<3
+plotly>=5.20,<8
 requests>=2.31,<3
 scikit-learn>=1.4,<2
-xgboost>=2.0,<3
 python-dotenv>=1.0,<2
+
+# Optional: enables the "ML Advanced" gradient-boosting model (falls back to a
+# RandomForest when not installed). ~100 MB wheel.
+xgboost>=2.0,<4

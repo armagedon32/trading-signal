@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card prose">
+  <h1>About {{ site_name }}</h1>
+  <p>{{ site_name }} is a free tool for Filipinos abroad. Type the amount you want to send home and it shows,
+     side by side, how many pesos each remittance app will deliver <em>today</em> – fees and exchange-rate mark-ups included.</p>
+
+  <h2>Why it exists</h2>
+  <p>Most people pick one app and stick with it. But rates move every day and differ by several percent between apps.
+     On a ₱30,000 padala that difference can be ₱500–₱1,500 – every month. This site makes the check take ten seconds.</p>
+
+  <h2>How we make money</h2>
+  <p>Some "Open" buttons are referral links. When someone signs up through them and sends money, the app pays us a small
+     referral fee. You pay nothing extra. The ranking is computed only from the pesos received – a referral link never moves an
+     app up the list, and apps that pay us nothing are shown the same way.</p>
+
+  <h2>Accuracy</h2>
+  <ul>
+    <li>Quotes come from the providers' own public rate calculators and are refreshed every few minutes.</li>
+    <li>Mid-market rates and the 30-day chart come from Wise and the European Central Bank (via Frankfurter).</li>
+    <li>Promotional rates are marked. Cash pick-up, card pay-in and very large amounts can have different fees.</li>
+    <li>The amount shown inside the app at the moment you pay is always the final one.</li>
+  </ul>
+
+  <h2>Telegram alerts</h2>
+  <p>Our free bot can message you when the dollar (or dirham, riyal, pound…) reaches a level you choose, and can send a
+     short morning summary. We store only your Telegram chat id, currency and target rate; send <code>/stop</code> to delete them.</p>
+
+  <p class="muted small">{{ site_name }} is not a money transfer service and does not handle your money. Not financial advice.</p>
+</section>
+{% endblock %}

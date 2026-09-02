@@ -1,0 +1,11 @@
+# Hint for Railway (legacy config-as-code; Railway is retiring these files on 2026-12-01).
+# The dashboard settings in DEPLOY.md are what matter: set Root Directory = padala-compare.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

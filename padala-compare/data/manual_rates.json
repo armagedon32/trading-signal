@@ -1,0 +1,9 @@
+{
+  "_readme": "Optional. Type in rates for providers that have no public calculator (e.g. a local bank or a Gulf exchange house). rate = pesos per 1 unit, fee = in the sending currency. Delete an entry to hide it. Manual quotes never override live quotes for the same provider.",
+  "SAR": {
+    "worldremit": {"rate": 16.45, "fee": 0, "as_of": "2026-09-02", "note": "typed from worldremit.com calculator"}
+  },
+  "AED": {
+    "worldremit": {"rate": 16.95, "fee": 0, "as_of": "2026-09-02", "note": "typed from worldremit.com calculator"}
+  }
+}

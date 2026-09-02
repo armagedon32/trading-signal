@@ -1,0 +1,25 @@
+# Render Blueprint for PadalaCompare (padala-compare/).
+# Dashboard -> New -> Blueprint -> pick this repo -> Deploy.  Runs on the free plan.
+# Lives at the repo root because that is where Render looks by default; the
+# service itself is built from the padala-compare/ folder (rootDir).
+services:
+  - type: web
+    name: padala-compare
+    runtime: python
+    plan: free
+    rootDir: padala-compare
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - padala-compare/**
+        - render.yaml
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"          # Render needs a fully qualified version here
+      - key: ADMIN_TOKEN
+        generateValue: true      # random secret for /admin and the Telegram webhook
+      # SITE_URL is detected automatically from RENDER_EXTERNAL_URL.
+      # Add TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME and AFF_* later in the
+      # dashboard (Environment tab) - they are optional.

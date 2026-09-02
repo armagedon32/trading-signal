@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title or site_name }} · {{ site_name }}</title>
+  <meta name="description" content="{{ page_description or tagline }}">
+  {% if canonical %}<link rel="canonical" href="{{ canonical }}">{% endif %}
+  <meta property="og:title" content="{{ page_title or site_name }}">
+  <meta property="og:description" content="{{ page_description or tagline }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ site_name }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>₱</text></svg>">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">₱ {{ site_name }}</a>
+  <nav>
+    <a href="/">Compare</a>
+    <a href="/about">About</a>
+    {% if bot_username %}<a href="https://t.me/{{ bot_username }}" rel="noopener">Telegram bot</a>{% endif %}
+  </nav>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer>
+  <p><strong>Disclosure:</strong> some links on this site are referral links. If you sign up through them we may earn a
+     small commission at no extra cost to you. It never changes the ranking – the app that gives the most pesos is always on top.</p>
+  <p>Rates come from the providers' public calculators and are refreshed regularly; the final amount is always the one shown
+     inside the app when you pay. Mid-market rates: Wise / European Central Bank. Not financial advice.</p>
+  <p>© {{ year }} {{ site_name }} · <a href="/about">About</a> · <a href="/api/docs">API</a></p>
+</footer>
+</body>
+</html>
